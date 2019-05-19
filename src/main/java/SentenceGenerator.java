@@ -1,5 +1,8 @@
 import enums.OntFileType;
 import models.CustomOntDoc;
+import org.apache.jena.atlas.iterator.Iter;
+import org.apache.jena.base.Sys;
+import utility.OntFileReader;
 
 import org.apache.jena.ontology.Individual;
 import org.apache.jena.ontology.OntModel;
@@ -7,26 +10,29 @@ import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.util.FileManager;
 import org.apache.jena.util.iterator.ExtendedIterator;
+
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
-import simplenlg.framework.NLGElement;
+
 import simplenlg.framework.NLGFactory;
 import simplenlg.lexicon.Lexicon;
 import simplenlg.phrasespec.SPhraseSpec;
 import simplenlg.realiser.english.Realiser;
-import utility.OntFileReader;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class SentenceGenerator {
 
     private static final String PATH = "E:/Projects/semantic-web-projects/university.rdf";
     private static String namespace;
     private static Document ontDocument;
+    private HashMap<String, HashMap<String, String>> ontMap = new HashMap<String, HashMap<String, String>>();
 
     public static void main(String[] args) {
         OntFileReader ontFileReader = new OntFileReader(PATH);
@@ -53,10 +59,6 @@ public class SentenceGenerator {
         // Check for OWL / RDF extensions to differentiate the processing
         String fileType = PATH.substring(PATH.lastIndexOf('.') + 1).trim();
 
-        Lexicon lexicon = Lexicon.getDefaultLexicon();
-        NLGFactory nlgFactory = new NLGFactory(lexicon);
-        Realiser realiser = new Realiser(lexicon);
-
         if (fileType.equals(OntFileType.RDF.getType())) {
             OntModel model = ModelFactory.createOntologyModel(); // Load knowldge model
             InputStream in = FileManager.get().open(PATH);
@@ -73,7 +75,9 @@ public class SentenceGenerator {
                 qry = "SELECT ?y ?z WHERE {" + "<" + individual + "> ?y ?z ." + "}";
 
                 // Extract individual / subject
-                String subject = (individual.replace(namespace, " "));
+                String subject = (individual.replace(namespace, ""));
+
+                ontMap.put(subject, new HashMap<String, String>());
 
                 Query query = QueryFactory.create(qry);
                 QueryExecution qexec = QueryExecutionFactory.create(query, model);
@@ -98,10 +102,10 @@ public class SentenceGenerator {
 
                         // This becomes the predicate
                         // Remove namespace URL and get the end value only
-                        predicate = predicateUriWithNamespace.replace(namespace, " ");
+                        predicate = predicateUriWithNamespace.replace(namespace, "");
 
                         String objectUriWithNamespace = sol.get("z").toString(); // This is the object value
-                        object = objectUriWithNamespace.replace(namespace, " ");
+                        object = objectUriWithNamespace.replace(namespace, "");
                         String propertyType = "";
                         if (sol.get("z").isResource()) {
                             // Object value can be a resource
@@ -116,13 +120,7 @@ public class SentenceGenerator {
                         System.out.println("Property Type: " + propertyType);
                         System.out.println("Object: " + object);
 
-                        SPhraseSpec p = nlgFactory.createClause();
-                        p.setSubject(subject);
-                        p.setVerb(predicate);
-                        p.setObject(object);
-
-                        String output = realiser.realiseSentence(p); // Realiser created earlier.
-                        System.out.println("Sentence: " + output);
+                        ontMap.get(subject).put(predicate, object);
 
                         System.out.println("----------------------------------------------------");
                     }
@@ -136,6 +134,38 @@ public class SentenceGenerator {
     }
 
     private void generateSentences() {
+        Lexicon lexicon = Lexicon.getDefaultLexicon();
+        NLGFactory nlgFactory = new NLGFactory(lexicon);
+        Realiser realiser = new Realiser(lexicon);
+
+        SPhraseSpec p = nlgFactory.createClause();
+        Iterator<String> subjectKeyIterator = ontMap.keySet().iterator();
+        while (subjectKeyIterator.hasNext()) {
+            String currSubject = subjectKeyIterator.next();
+            String subject, verb, object;
+
+            if (currSubject.contains("Lecturer")) {
+                subject = ontMap.get(currSubject).get("first_name") + " " + ontMap.get(currSubject).get("last_name");
+                verb = "teaches";
+                object = ontMap.get(currSubject).get("teaches");
+            } else if (currSubject.contains("Student")) {
+                subject = ontMap.get(currSubject).get("first_name") + " " + ontMap.get(currSubject).get("last_name");
+                verb = "studies";
+                object = ontMap.get(currSubject).get("studies");
+            } else {
+                subject = currSubject;
+                verb = "is a";
+                object = "course";
+            }
+
+            p.setSubject(subject);
+            p.setVerb(verb);
+            p.setObject(object);
+
+            String output = realiser.realiseSentence(p); // Realiser created earlier.
+            System.out.println("Sentence: " + output);
+        }
+
 
     }
 }

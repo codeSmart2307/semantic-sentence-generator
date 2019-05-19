@@ -1,8 +1,6 @@
 package utility;
 
-import enums.OntFileType;
 import models.CustomOntDoc;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.util.FileManager;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
