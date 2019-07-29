@@ -1,20 +1,9 @@
-import enums.OntFileType;
-import models.CustomOntDoc;
-import utility.OntFileReader;
-
 import org.apache.jena.ontology.Individual;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.query.*;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.util.FileManager;
 import org.apache.jena.util.iterator.ExtendedIterator;
-
-import org.xml.sax.SAXException;
-
-import simplenlg.framework.NLGFactory;
-import simplenlg.lexicon.Lexicon;
-import simplenlg.phrasespec.SPhraseSpec;
-import simplenlg.realiser.english.Realiser;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
@@ -24,7 +13,17 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.logging.Logger;
+
+import org.xml.sax.SAXException;
+
+import simplenlg.framework.NLGFactory;
+import simplenlg.lexicon.Lexicon;
+import simplenlg.phrasespec.SPhraseSpec;
+import simplenlg.realiser.english.Realiser;
+
+import enums.OntFileType;
+import models.CustomOntDoc;
+import utility.OntFileReader;
 
 public class SentenceGenerator {
 
@@ -131,6 +130,9 @@ public class SentenceGenerator {
         }
     }
 
+    /**
+     * Generates sentences with SimpleNLG
+     */
     private void generateSentences() {
         System.out.println("========================== Generated Sentences =============================");
         Lexicon lexicon = Lexicon.getDefaultLexicon();
