@@ -1,7 +1,5 @@
 import enums.OntFileType;
 import models.CustomOntDoc;
-import org.apache.jena.atlas.iterator.Iter;
-import org.apache.jena.base.Sys;
 import utility.OntFileReader;
 
 import org.apache.jena.ontology.Individual;
@@ -11,7 +9,6 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.util.FileManager;
 import org.apache.jena.util.iterator.ExtendedIterator;
 
-import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import simplenlg.framework.NLGFactory;
@@ -26,13 +23,14 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.logging.Logger;
 
 public class SentenceGenerator {
 
-    private static final String PATH = "E:/Projects/semantic-web-projects/university.rdf";
+    private static final String PATH = "/Users/raneeshgomez/Documents/IIT/FYP/semantic-web-projects/university.owl";
     private static String namespace;
-    private static Document ontDocument;
-    private HashMap<String, HashMap<String, String>> ontMap = new HashMap<String, HashMap<String, String>>();
+    private Map<String, HashMap<String, String>> ontMap = new HashMap<>();
 
     public static void main(String[] args) {
         OntFileReader ontFileReader = new OntFileReader(PATH);
@@ -40,7 +38,6 @@ public class SentenceGenerator {
         try {
             ontDoc = ontFileReader.documentLoader();
             namespace = ontDoc.getNamespace();
-            ontDocument = ontDoc.getOntDocument();
             System.out.println("Namespace: " + namespace);
         } catch (SAXException e) {
             e.printStackTrace();
@@ -59,7 +56,7 @@ public class SentenceGenerator {
         // Check for OWL / RDF extensions to differentiate the processing
         String fileType = PATH.substring(PATH.lastIndexOf('.') + 1).trim();
 
-        if (fileType.equals(OntFileType.RDF.getType())) {
+        if (fileType.equals(OntFileType.RDF.getType()) || fileType.equals(OntFileType.OWL.getType())) {
             OntModel model = ModelFactory.createOntologyModel(); // Load knowldge model
             InputStream in = FileManager.get().open(PATH);
             model.read(in, "");
@@ -86,7 +83,7 @@ public class SentenceGenerator {
                     ResultSet rs = qexec.execSelect();
                     String predicate;
                     String object;
-                    System.out.println("========================= Subject: " + subject + " =============================");
+                    System.out.println("========================= Subject: " + subject + " [START] =============================");
                     while (rs.hasNext()) {
                         QuerySolution sol = rs.nextSolution();
                         String predicateUriWithNamespace = sol.get("y").toString();
@@ -124,6 +121,7 @@ public class SentenceGenerator {
 
                         System.out.println("----------------------------------------------------");
                     }
+                    System.out.println("========================== Subject: " + subject + " [END] ==============================\n");
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 } finally {
@@ -134,38 +132,37 @@ public class SentenceGenerator {
     }
 
     private void generateSentences() {
+        System.out.println("========================== Generated Sentences =============================");
         Lexicon lexicon = Lexicon.getDefaultLexicon();
         NLGFactory nlgFactory = new NLGFactory(lexicon);
         Realiser realiser = new Realiser(lexicon);
 
-        SPhraseSpec p = nlgFactory.createClause();
         Iterator<String> subjectKeyIterator = ontMap.keySet().iterator();
         while (subjectKeyIterator.hasNext()) {
+            SPhraseSpec p = nlgFactory.createClause();
             String currSubject = subjectKeyIterator.next();
             String subject, verb, object;
 
             if (currSubject.contains("Lecturer")) {
                 subject = ontMap.get(currSubject).get("first_name") + " " + ontMap.get(currSubject).get("last_name");
-                verb = "teaches";
+                verb = "teach";
                 object = ontMap.get(currSubject).get("teaches");
             } else if (currSubject.contains("Student")) {
                 subject = ontMap.get(currSubject).get("first_name") + " " + ontMap.get(currSubject).get("last_name");
-                verb = "studies";
+                verb = "study";
                 object = ontMap.get(currSubject).get("studies");
             } else {
                 subject = currSubject;
-                verb = "is a";
-                object = "course";
+                verb = "be";
+                object = "a course";
             }
 
             p.setSubject(subject);
             p.setVerb(verb);
             p.setObject(object);
 
-            String output = realiser.realiseSentence(p); // Realiser created earlier.
-            System.out.println("Sentence: " + output);
+            String output = realiser.realiseSentence(p);
+            System.out.println(output);
         }
-
-
     }
 }
